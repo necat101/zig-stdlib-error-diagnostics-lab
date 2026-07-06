@@ -1,0 +1,547 @@
+[
+  {
+    "by": "Bogdanp",
+    "descendants": 53,
+    "id": 44812985,
+    "kids": [
+      44815545,
+      44815256,
+      44814789,
+      44814415,
+      44815081,
+      44815156,
+      44816025,
+      44815663,
+      44814837,
+      44822727
+    ],
+    "score": 157,
+    "time": 1754492599,
+    "title": "Zig Error Patterns",
+    "type": "story",
+    "url": "https://glfmn.io/posts/zig-error-patterns/"
+  },
+  {
+    "by": "davidkunz",
+    "id": 44815545,
+    "kids": [
+      44816736,
+      44815908,
+      44817144,
+      44817816,
+      44816301,
+      44816131
+    ],
+    "parent": 44812985,
+    "text": "A little bit unrelated, but how do people deal with the abstinence of payloads in zig errors? For example, when parsing a JSON string, the error `UnexpectedToken` is not very helpful. Are libraries typically designed to accept an optional input to store potential errors?",
+    "time": 1754503726,
+    "type": "comment"
+  },
+  {
+    "by": "quantummagic",
+    "id": 44816736,
+    "kids": [
+      44822530,
+      44845202,
+      44817225,
+      44818839
+    ],
+    "parent": 44815545,
+    "text": "The idiomatic way in Zig is to return the simple unadorned error, but return detailed error data through a pointer argument passed into the function, allowing the function to fill in extra information before returning an error.<p><pre><code>    const MyError = error{ FileNotFound, PermissionDenied };\n\n    fn readFile(path: []const u8, outErrInfo: *ErrorInfo) ![]const u8 {\n      if (fileMissing) {\n        if (outErrInfo) |info| {\n            info.* = ErrorInfo{\n                .code = MyError.FileNotFound,\n                .message = &quot;File missing&quot;,\n                .line = @line(),\n            };\n        }\n        return MyError.FileNotFound;\n      }\n      return data; &#x2F;&#x2F; success\n    }\n</code></pre>\nThe advantage of this is that everything is explicit, and it is up to the caller to arrange memory usage for error data; ie. the compiler does not trigger any implicit memory allocation to accommodate error returns.  This is a fundamental element of Zig&#x27;s design, that there are no hidden or implicit memory allocations",
+    "time": 1754509309,
+    "type": "comment"
+  },
+  {
+    "by": "nextaccountic",
+    "id": 44822530,
+    "kids": [
+      44828073
+    ],
+    "parent": 44816736,
+    "text": "&gt; The advantage of this is that everything is explicit, and it is up to the caller to arrange memory usage for error data<p>Likewise, this has the disadvantage that the caller must allocate space for the error payload, even if the error is very unlikely",
+    "time": 1754560022,
+    "type": "comment"
+  },
+  {
+    "by": "quantummagic",
+    "id": 44828073,
+    "kids": [
+      44833730
+    ],
+    "parent": 44822530,
+    "text": "Well, it is an optional parameter (my typo made that unclear), so the caller may omit it if desired.  The reason for this particular tradeoff, is in favour of correctness rather than convenience, eg. if the failure is in an OOM condition, it can still be reported.",
+    "time": 1754589730,
+    "type": "comment"
+  },
+  {
+    "by": "nextaccountic",
+    "id": 44833730,
+    "parent": 44828073,
+    "text": "Ok this sounds nice. You would just need some syntax sugar to make this ergonomic (both in the side of function calling, and also in the side of the erroring function) but the fundamentals seem solid<p>I think there&#x27;s space for a post-Rust, post-Zig language to combine the approaches of both and make it <i>possible</i> to do away with automatic heap allocation (when needed - not every piece of code wants to bother with this), but also don&#x27;t make code overly verbose when doing so.",
+    "time": 1754630598,
+    "type": "comment"
+  },
+  {
+    "by": "randyrand",
+    "id": 44845202,
+    "parent": 44816736,
+    "text": "IMO error objects should\u2019ve included a pointer to some extra preallocated memory.<p>In my C code I always allocate my error objects first, with usually 1024 bytes just for error strings.<p>In cases where i don\u2019t care for error strings, i allocate 0 bytes for them.<p>I have a simple function to append error strings, and it checks for space. So all the code is ambivalent about whether this extra space exists.<p>works wonderfully.",
+    "time": 1754732079,
+    "type": "comment"
+  },
+  {
+    "by": "dnautics",
+    "id": 44817225,
+    "kids": [
+      44819986
+    ],
+    "parent": 44816736,
+    "text": "should be ?*ErrorInfo in the header there =D",
+    "time": 1754511513,
+    "type": "comment"
+  },
+  {
+    "by": "quantummagic",
+    "id": 44819986,
+    "parent": 44817225,
+    "text": "Thanks.  There are a few thinko&#x2F;typoes in the example (which can no longer be edited), but the basic outline survived okay.",
+    "time": 1754533958,
+    "type": "comment"
+  },
+  {
+    "by": "metaltyphoon",
+    "id": 44818839,
+    "kids": [
+      44822179,
+      44819977,
+      44818975
+    ],
+    "parent": 44816736,
+    "text": "So\u2026 pretty much how C does it.",
+    "time": 1754521156,
+    "type": "comment"
+  },
+  {
+    "by": "pjmlp",
+    "id": 44822179,
+    "kids": [
+      44828157
+    ],
+    "parent": 44818839,
+    "text": "Zig is basically the safety of Modula-2, with a revamped C like syntax, which is why it feels too little for a 2025 language.<p>Naturally the comptime part is new, but I wouldn&#x27;t pick a language only because of that.",
+    "time": 1754556714,
+    "type": "comment"
+  },
+  {
+    "by": "quantummagic",
+    "id": 44828157,
+    "kids": [
+      44835162
+    ],
+    "parent": 44822179,
+    "text": "Well, to look at it optimistically, it&#x27;s meant as a foundational language, to take over the role C still has today, of being the only true glue language that can underlie all the others.  If Zig can actually take over that function, then it will be a major upgrade to the ecosystem, even though it will never be the language of choice for most projects.",
+    "time": 1754590002,
+    "type": "comment"
+  },
+  {
+    "by": "pjmlp",
+    "id": 44835162,
+    "parent": 44828157,
+    "text": "Despite all my bashing regarding C, I would rather keep C around with a standard -fhardening, -fsafe, or whatever, with similar constraints, enabling enums without implicit numeric conversions, standard library types for arrays and strings, no decays of arrays into pointer.<p>Probably more than enough if we leave C as a kind of portable Assembler role, to be used as much as Assembly is, and leave everything else to safer managed languages.<p>A model just like UNIX authors themselves have applied when creating Inferno with Limbo, with the learnings of UNIX and Plan 9.<p>Not a fan of @, !, .{ } all over the place, or the struct based imports that look like Javascript <i>require()</i> instead of a proper module system.",
+    "time": 1754645791,
+    "type": "comment"
+  },
+  {
+    "by": "quantummagic",
+    "id": 44819977,
+    "parent": 44818839,
+    "text": "The main difference is that C doesn&#x27;t have error (result types) baked into the language.  So the expectation would be in the Zig example above, the calling function would never even bother to inspect the error details, unless the error path was triggered by the called function.",
+    "time": 1754533843,
+    "type": "comment"
+  },
+  {
+    "by": "dwattttt",
+    "id": 44818975,
+    "kids": [
+      44820807
+    ],
+    "parent": 44818839,
+    "text": "Culture and coding standards count for a lot. C _can_ do this, but it&#x27;s not normal to.<p>If Zig can foster a culture of handling errors this way, it&#x27;ll be the way the community writ large handle errors.",
+    "time": 1754522426,
+    "type": "comment"
+  },
+  {
+    "by": "mark38848",
+    "id": 44820807,
+    "parent": 44818975,
+    "text": "It&#x27;s still complete dogshit not to be able to have data there. Odin is much better here, iirc",
+    "time": 1754543409,
+    "type": "comment"
+  },
+  {
+    "by": "maleldil",
+    "id": 44815908,
+    "kids": [
+      44816974
+    ],
+    "parent": 44815545,
+    "text": "&gt; Are libraries typically designed to accept an optional input to store potential errors?<p>Yes. Stdlib&#x27;s JSON module has a separate diagnostics object [1]. IMO, this is the weakest part of Zig&#x27;s error handling story, although the reasons for this are understandable.<p>[1] <a href=\"https:&#x2F;&#x2F;ziglang.org&#x2F;documentation&#x2F;master&#x2F;std&#x2F;#std.json.Scanner.Diagnostics\" rel=\"nofollow\">https:&#x2F;&#x2F;ziglang.org&#x2F;documentation&#x2F;master&#x2F;std&#x2F;#std.json.Scann...</a>",
+    "time": 1754505547,
+    "type": "comment"
+  },
+  {
+    "by": "AndyKelley",
+    "id": 44816974,
+    "kids": [
+      44817264
+    ],
+    "parent": 44815908,
+    "text": "I&#x27;d like to note that std.json, as it currently stands, is not a good example of proper error handling. Unless you use that awkward lower level Scanner API, if you get a schema mismatch it reports some failure code and does not populate a diagnostics struct, which is painful and useless.<p>On the other hand the std.zon author did not make this mistake, i.e. `std.zon.parse.fromSlice` takes an optional Diagnostics struct which gives you all the information you need (including a handy format method for printing human readable messages).",
+    "time": 1754510481,
+    "type": "comment"
+  },
+  {
+    "by": "dnautics",
+    "id": 44817264,
+    "kids": [
+      44817671
+    ],
+    "parent": 44816974,
+    "text": "I presume sometime in the not-immediate-but-not-too-distant-future there is going to be a push to &quot;unify&quot; std with a bunch of the &quot;best practices&quot; and call them out in the documentation.",
+    "time": 1754511643,
+    "type": "comment"
+  },
+  {
+    "by": "AndyKelley",
+    "id": 44817671,
+    "parent": 44817264,
+    "text": "Indeed: <a href=\"https:&#x2F;&#x2F;github.com&#x2F;ziglang&#x2F;zig&#x2F;issues&#x2F;1629\" rel=\"nofollow\">https:&#x2F;&#x2F;github.com&#x2F;ziglang&#x2F;zig&#x2F;issues&#x2F;1629</a>",
+    "time": 1754513332,
+    "type": "comment"
+  },
+  {
+    "by": "dnautics",
+    "id": 44817144,
+    "parent": 44815545,
+    "text": "I wrote an article about one possible pattern which is a concrete realization of your question -- though with more ceremony and complexity since the pathway is fully compiled out if you don&#x27;t use it (vs a nullable pointer strategy):<p>&gt; Are libraries typically designed to accept an optional input to store potential errors?<p><a href=\"https:&#x2F;&#x2F;zig.news&#x2F;ityonemo&#x2F;sneaky-error-payloads-1aka\" rel=\"nofollow\">https:&#x2F;&#x2F;zig.news&#x2F;ityonemo&#x2F;sneaky-error-payloads-1aka</a><p>if you prefer video form:<p><a href=\"https:&#x2F;&#x2F;www.youtube.com&#x2F;watch?v=aFeqWWJP4LE\" rel=\"nofollow\">https:&#x2F;&#x2F;www.youtube.com&#x2F;watch?v=aFeqWWJP4LE</a><p>The answer is no, libraries are not typically designed with a standardized convention for payload return.",
+    "time": 1754511228,
+    "type": "comment"
+  },
+  {
+    "by": "davidkunz",
+    "id": 44817816,
+    "parent": 44815545,
+    "text": "Thank you all for these great and detailed explanations, I&#x27;ve learned a lot! I like the approach with an optional pointer, it fits to zig&#x27;s philosophy quite well. Although there&#x27;s a bit of a disconnect between the unadorned error and the corresponding data struct. I could imagine it requires care when the data struct is a union, as one needs to know which error corresponds to which variant.",
+    "time": 1754514212,
+    "type": "comment"
+  },
+  {
+    "by": "jmull",
+    "id": 44816301,
+    "kids": [
+      44825163
+    ],
+    "parent": 44815545,
+    "text": "I think the idea is errors are for control flow. If you have other information to return from a function, you can just return it \u2014 whether directly as the return value or through an \u201cout\u201d parameter or setting it in some context.",
+    "time": 1754507368,
+    "type": "comment"
+  },
+  {
+    "by": "meepmorp",
+    "id": 44825163,
+    "parent": 44816301,
+    "text": "It&#x27;s weird that you&#x27;ve been downvoted for essentially restating what Zig&#x27;s BFDN said when closing an issue related to error payloads:<p><a href=\"https:&#x2F;&#x2F;github.com&#x2F;ziglang&#x2F;zig&#x2F;issues&#x2F;2647#issuecomment-2525409324\" rel=\"nofollow\">https:&#x2F;&#x2F;github.com&#x2F;ziglang&#x2F;zig&#x2F;issues&#x2F;2647#issuecomment-2525...</a>",
+    "time": 1754577922,
+    "type": "comment"
+  },
+  {
+    "by": "hansvm",
+    "id": 44816131,
+    "kids": [
+      44817693
+    ],
+    "parent": 44815545,
+    "text": "At a practical level, most of the language doesn&#x27;t care about the distinction between errors and other types. You mostly just have to consider `try&#x2F;catch&#x2F;errdefer`. Your question then, mildly restated, is &quot;how do people deal with cases where they want to use `try&#x2F;catch&#x2F;errdefer` but also want to return a payload?&quot;<p>It&#x27;s worth asking, at least a little, how often you want that in the first place.<p>Contrasting with Rust as an example, suppose you want Zig&#x27;s &quot;try&quot; functionality with arbitrary payloads. Both functions need a compatible error type (a notable source of minor refactors bubbling into whole-project changes), or else you can accept a little more boilerplate and box everything with a library like `anyhow`. That&#x27;s _fine_, but does it help you solve real problems? Opinions vary, but I think it mostly makes your life harder. You have stack unwinding available if you really need to see the source of a thing, and since the whole point of `try` is to bubble things up to callers who don&#x27;t have the appropriate context to handle them, they likely don&#x27;t really care about the metadata you&#x27;re tacking on.<p>Suppose you want Zig&#x27;s &quot;catch&quot; functionality with arbitrary payloads. That&#x27;s just a `union` type. If you actually expect callers to inspect and care about the details of each possible return branch, you should provide a return type allowing them to do stuff with that information.<p>The odd duck out is `errdefer`. IMO it&#x27;s reasonably common for libraries to want to do some sort of cleanup on &quot;error&quot; conditions, where that cleanup often doesn&#x27;t depend on which error you hit, and you lose that functionality if you just return a union type. My usual workaround (in the few cases where I actually want that information returned and also have to do some sort of cleanup) is to have a private inner function and a public outer function. The inner function has some sort of `out` parameter where it sticks that unioned metadata. The outer function executes the code which might have to be cleaned up on errors, calls the inner function, and figures out what to do from there. Result location semantics make it as efficient as hand-rolled code for release builds. Not everything fits into that paradigm, but the exceptions are rare enough that the extra boilerplate really isn&#x27;t bad on average (especially when comparing to an already very verbose language).<p>Depending on the API, your proposal of having a dedicated `out` parameter exposed further up the chain to callers might be appropriate. I&#x27;m sure somebody has done so.<p>Something I also do in a fair amount of my code is let the caller specify my return type, and I&#x27;ll avoid work if they don&#x27;t request a certain payload (e.g., not adding parse failure line numbers if not requested). It lets you write a reasonably generic API without a ton of code complexity, still allowing callers to get the information they want.",
+    "time": 1754506667,
+    "type": "comment"
+  },
+  {
+    "by": "Ar-Curunir",
+    "id": 44817693,
+    "kids": [
+      44818787
+    ],
+    "parent": 44816131,
+    "text": "&gt; suppose you want Zig&#x27;s &quot;try&quot; functionality with arbitrary payloads. Both functions need a compatible error type (a notable source of minor refactors bubbling into whole-project changes), or else you can accept a little more boilerplate and box everything with a library like `anyhow`. That&#x27;s _fine_, but does it help you solve real problems? Opinions vary, but I think it mostly makes your life harder.<p>This is not true, you simply need to add a single new variant to the callers error type, and either a From impl or a manual conversion at the call site",
+    "time": 1754513450,
+    "type": "comment"
+  },
+  {
+    "by": "hansvm",
+    "id": 44818787,
+    "kids": [
+      44818992
+    ],
+    "parent": 44817693,
+    "text": "&quot;compatible error type&quot;<p>Which is prone to causing propagating changes if you&#x27;re not comfortable slapping duck tape on every conversion.",
+    "time": 1754520727,
+    "type": "comment"
+  },
+  {
+    "by": "dwattttt",
+    "id": 44818992,
+    "parent": 44818787,
+    "text": "It depends on whether people depend on the structure of the errors. If they just stringify them, that shouldn&#x27;t result in changes.<p>If people are getting into the structure of the errors, they might need to update their code that works with them.",
+    "time": 1754522565,
+    "type": "comment"
+  },
+  {
+    "by": "vrnvu",
+    "id": 44815256,
+    "kids": [
+      44819842
+    ],
+    "parent": 44812985,
+    "text": "It&#x27;s amazing how coherent Zig&#x27;s fundamental building blocks are as a programming language, everything fits together like a puzzle.<p>This post reminds me of one of Andrew&#x27;s early talks about the type system and the comptime... With the core building blocks, we can achieve elegant solutions without adding unnecessary syntax complexity.",
+    "time": 1754502459,
+    "type": "comment"
+  },
+  {
+    "by": "delifue",
+    "id": 44819842,
+    "kids": [
+      44821107,
+      44820797
+    ],
+    "parent": 44815256,
+    "text": "In my opinion Zig is elegant except for one thing: cannot attach data to error.<p><a href=\"https:&#x2F;&#x2F;github.com&#x2F;ziglang&#x2F;zig&#x2F;issues&#x2F;2647\" rel=\"nofollow\">https:&#x2F;&#x2F;github.com&#x2F;ziglang&#x2F;zig&#x2F;issues&#x2F;2647</a><p>You have to workaround by things like passing into a pointer to error object.",
+    "time": 1754532192,
+    "type": "comment"
+  },
+  {
+    "by": "nektro",
+    "id": 44821107,
+    "parent": 44819842,
+    "text": "this is because attaching a payload requires asking the question of who and how the memory of such a payload is managed, and Zig the language never prescribes you into a particular answer to that question.",
+    "time": 1754546433,
+    "type": "comment"
+  },
+  {
+    "by": "mark38848",
+    "id": 44820797,
+    "kids": [
+      44822520,
+      44823194
+    ],
+    "parent": 44819842,
+    "text": "Yes also the function syntax is weird and ugly because functions aren&#x27;t expressions.",
+    "time": 1754543324,
+    "type": "comment"
+  },
+  {
+    "by": "nextaccountic",
+    "id": 44822520,
+    "parent": 44820797,
+    "text": "What do you mean? pun fn f() { } ? How is this weird",
+    "time": 1754559923,
+    "type": "comment"
+  },
+  {
+    "by": "throwawaymaths",
+    "id": 44823194,
+    "parent": 44820797,
+    "text": "perfectly valid to do const f = fn (...) ... {...}",
+    "time": 1754566597,
+    "type": "comment"
+  },
+  {
+    "by": "etyp",
+    "id": 44814789,
+    "parent": 44812985,
+    "text": "This goes to show how Zig&#x27;s language design makes everything look nicer and simpler - the `errdefer` patterns in tests are super nice! I&#x27;ve debugged my Zig tests with simple print debugging (or try to narrow it down to a standalone case I can use a debugger), but I&#x27;ll certainly use some of these tricks in the future.",
+    "time": 1754500464,
+    "type": "comment"
+  },
+  {
+    "by": "ijustlovemath",
+    "id": 44814415,
+    "parent": 44812985,
+    "text": "The website design is so pleasing, props!",
+    "time": 1754498657,
+    "type": "comment"
+  },
+  {
+    "by": "skrebbel",
+    "id": 44815081,
+    "kids": [
+      44822816,
+      44819418
+    ],
+    "parent": 44812985,
+    "text": "Wow, errdefer sounds like the kind of thing every language ought to have.",
+    "time": 1754501716,
+    "type": "comment"
+  },
+  {
+    "by": "BradleyChatha",
+    "id": 44822816,
+    "parent": 44815081,
+    "text": "If I understand the feature correctly, D has this via scope(failure) [1]<p>```\nvoid func()\n{\n  scope(failure) writeln(&quot;Something went wrong!&quot;);\n}\n```<p>[1] <a href=\"https:&#x2F;&#x2F;tour.dlang.org&#x2F;tour&#x2F;en&#x2F;gems&#x2F;scope-guards\" rel=\"nofollow\">https:&#x2F;&#x2F;tour.dlang.org&#x2F;tour&#x2F;en&#x2F;gems&#x2F;scope-guards</a>",
+    "time": 1754562927,
+    "type": "comment"
+  },
+  {
+    "by": "jayd16",
+    "id": 44819418,
+    "kids": [
+      44821423,
+      44819463
+    ],
+    "parent": 44815081,
+    "text": "Is it significantly different than a try-catch block?",
+    "time": 1754526774,
+    "type": "comment"
+  },
+  {
+    "by": "skrebbel",
+    "id": 44821423,
+    "kids": [
+      44822602,
+      44821447
+    ],
+    "parent": 44819418,
+    "text": "Yeah it lets you put code that goes in &quot;catch&quot; all over your function body, right next to where it&#x27;s most relevant. It lets you go &quot;hm but what about errors? ah handled! ok i can forget about it&quot; when reading a function without having to skip back and forth between the main code and the catch block.",
+    "time": 1754549956,
+    "type": "comment"
+  },
+  {
+    "by": "masklinn",
+    "id": 44822602,
+    "parent": 44821423,
+    "text": "&gt; Yeah it lets you put code that goes in &quot;catch&quot; all over your function body, right next to where it&#x27;s most relevant.<p>To be fair I\u2019ve rarely seen that, usually you\u2019ve got half the method in a giant try block and have fun untangling which errors are caught intentionally and which are side-effects.",
+    "time": 1754560903,
+    "type": "comment"
+  },
+  {
+    "by": "jayd16",
+    "id": 44821447,
+    "parent": 44821423,
+    "text": "But that&#x27;s just try blocks around  where it&#x27;s relevant except the more precise scoping of a block and the catch being after where the errdefer is before.",
+    "time": 1754550248,
+    "type": "comment"
+  },
+  {
+    "by": "ijustlovemath",
+    "id": 44819463,
+    "kids": [
+      44821435
+    ],
+    "parent": 44819418,
+    "text": "one less level of indentation; reading down is happy path, seems nice!",
+    "time": 1754527233,
+    "type": "comment"
+  },
+  {
+    "by": "jayd16",
+    "id": 44821435,
+    "parent": 44819463,
+    "text": "Huh?  But the exceptional behaviors are listed first?<p>Would you say we should move to catch-try syntax?  Seems strange to me.",
+    "time": 1754550113,
+    "type": "comment"
+  },
+  {
+    "by": "jiehong",
+    "id": 44815156,
+    "kids": [
+      44824547
+    ],
+    "parent": 44812985,
+    "text": "Nice Font! (Berkeley Mono)",
+    "time": 1754502011,
+    "type": "comment"
+  },
+  {
+    "by": "conkeisterdoor",
+    "id": 44824547,
+    "parent": 44815156,
+    "text": "+1<p>It&#x27;s very nice and worth the $75 IMO. The new font builder they have gives you a lot of options to tweak&#x2F;customize the typeface, which is also very nice.",
+    "time": 1754575154,
+    "type": "comment"
+  },
+  {
+    "by": "yahoozoo",
+    "id": 44816025,
+    "kids": [
+      44816278
+    ],
+    "parent": 44812985,
+    "text": "Cool stuff, but the mixed casings I see here (and have in other Zig code) puts me on edge (not literally but yeah). You\u2019ve got `addSystemCommand` then a variable named `debug_step` which has a call `dependOn`. That said, looks like most of the stdlib stuff is camel case so the snake case variables are just the authors preference.",
+    "time": 1754506157,
+    "type": "comment"
+  },
+  {
+    "by": "schroffl",
+    "id": 44816278,
+    "kids": [
+      44817308
+    ],
+    "parent": 44816025,
+    "text": "The language reference has a section about naming identifiers <a href=\"https:&#x2F;&#x2F;ziglang.org&#x2F;documentation&#x2F;0.14.1&#x2F;#Names\" rel=\"nofollow\">https:&#x2F;&#x2F;ziglang.org&#x2F;documentation&#x2F;0.14.1&#x2F;#Names</a>",
+    "time": 1754507260,
+    "type": "comment"
+  },
+  {
+    "by": "dnautics",
+    "id": 44817308,
+    "parent": 44816278,
+    "text": "there was a proposal to rid of #3, but I guess that&#x27;s not going to happen.",
+    "time": 1754511786,
+    "type": "comment"
+  },
+  {
+    "by": "rkagerer",
+    "id": 44815663,
+    "kids": [
+      44816443
+    ],
+    "parent": 44812985,
+    "text": "I love the formatting and coloring on this blog page, it&#x27;s delightful to read.  Like an old school DOS game.",
+    "time": 1754504323,
+    "type": "comment"
+  },
+  {
+    "by": "sedatk",
+    "id": 44816443,
+    "kids": [
+      44818185
+    ],
+    "parent": 44815663,
+    "text": "It felt like a man page to me :)",
+    "time": 1754508018,
+    "type": "comment"
+  },
+  {
+    "by": "pyth0",
+    "id": 44818185,
+    "parent": 44816443,
+    "text": "I think the &quot;Manual page for glfmn.io&quot; text at the bottom confirms that. And I agree with the GP, it&#x27;s very pleasant to read and look at!",
+    "time": 1754516462,
+    "type": "comment"
+  },
+  {
+    "by": "ww520",
+    "id": 44814837,
+    "parent": 44812985,
+    "text": "These are excellent tips. I especially like the debugger integration in build.zig. I used to grep the cache directory to find the exe. The integration avoids all the extra steps.",
+    "time": 1754500673,
+    "type": "comment"
+  },
+  {
+    "by": "brianzelip",
+    "id": 44822727,
+    "parent": 44812985,
+    "text": "Beautiful web site!",
+    "time": 1754562187,
+    "type": "comment"
+  }
+]

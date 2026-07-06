@@ -1,0 +1,7 @@
+error_diagnostics_lab
+error_diagnostics_lab.exe
+error_diagnostics_lab.o
+*.o
+zig-out/
+.zig-cache/
+results_tmp/
