@@ -36,10 +36,10 @@
 
 - cases.json: 65099 bytes
 - error_diagnostics_lab.zig: 16106 bytes
-- compiled binary: 3019552 bytes
-- compile_time: 22.684s
-- run_time: 0.053s
-- python_time: 0.013s
+- compiled binary: 3019528 bytes
+- compile_time: 25.265s
+- run_time: 0.085s
+- python_time: 0.007s
 - subprocess_count: 3+ (zig version, zig fmt, zig build-exe, run)
 - Python: 3.12.3
 - Platform: Linux-6.17.0-1009-aws-x86_64-with-glibc2.39
