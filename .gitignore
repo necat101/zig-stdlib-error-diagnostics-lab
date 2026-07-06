@@ -5,3 +5,6 @@ error_diagnostics_lab.o
 zig-out/
 .zig-cache/
 results_tmp/
+__pycache__/
+*.pyc
+*.pyo
